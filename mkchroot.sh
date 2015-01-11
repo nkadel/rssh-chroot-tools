@@ -49,14 +49,22 @@ rsynctarget() {
     if [ $# -ne 1 ]; then
 	echo "Error: Bad argument to rsynctarget, exiting" >&2
 	exit 1
-    fi
-    
-    if [ ! -e "$target" ]; then
+    elif [ ! -e "$target" ]; then
 	echo "Warning: rsynctarget skipping nonexistent $target" >&2
 	return 1
     fi
-	
+
     echo "    rsynctarget: $target"
+    case $target in
+	/*../*)
+	    echo "Warning: rsynctarget 'rsync -R' cannot handle ../ in $target" >&2
+	    realdir="`dirname "$target" | xargs readlink --canonicalize`"
+	    realname="$realdir/`basename $target`"
+	    echo "    Using $realname" >&2
+	    rsynctarget "$realname"
+	    return $?
+	    ;;
+    esac
     if [ -L "$target" ]; then
 	#echo "Replicating symlink: $target"
 	rsync -a -H -R "$target" $CHROOTDIR
@@ -77,7 +85,7 @@ rsynctarget() {
 	case "$target" in
 	    */)
 		# Replicate contents of directory
-		echo "Replicating contents: $target"
+		#echo "Replicating contents: $target"
 		rsync -a -H -R "$target" $CHROOTDIR
 		return $?
 		;;
@@ -121,6 +129,16 @@ for libdir in $LIBDIRS; do
 done
 
 
+# Get NSS libraries as needed
+for nssdir in /lib/ /lib64/ /usr/lib64/ /usr/lib/; do
+    echo "Searching for libnss files: $nssdir"
+    find $nssdir -name libnss\* ! -type d | \
+	while read libnss; do
+	    echo "    Replicating libnss library: $libnss"
+	    rsynctarget $libnss
+    done
+done
+exit 6
 
 DEVICES="$DEVICES /dev/null"
 # Useful for enabling syslog or rsyslog
@@ -132,8 +150,6 @@ DEVICES="$DEVICES /dev/zero"
 for device in $DEVICES; do
     rsynctarget "$device"
 done
-
-
 
 echo "$progname: Replicating files and populated directories"
 FILES=''
@@ -182,15 +198,5 @@ for file in $FILES; do
     findlibs $file | \
 	while read lib; do
 	    rsynctarget $lib
-    done
-done
-
-# Get NSS libraries as needed
-for nssdir in /lib/ /lib64/ /usr/lib64/ /usr/lib/; do
-    echo "Searching for libnss files: $nssdir"
-    find $nssdir -name libnss\* ! -type d | \
-    while read libnss; do
-	echo "    Replicating libnss library: $libnss"
-	rsynctarget $libnss
     done
 done
