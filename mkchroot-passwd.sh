@@ -110,6 +110,4 @@ getent passwd | \
 done
 
 # Add root user for debugging
-mkchrootuser root
-
-cat  $CHROOTDIR/etc/passwd
+#mkchrootuser root
