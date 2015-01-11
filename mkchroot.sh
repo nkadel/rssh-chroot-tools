@@ -109,88 +109,101 @@ rsynctarget() {
 }
 
 echo "$progname: Replicating bare directories"
-SOURCES=''
-SOURCES="$SOURCES /dev"
-SOURCES="$SOURCES /etc"
-SOURCES="$SOURCES /usr"
-SOURCES="$SOURCES /usr/lib"
-SOURCES="$SOURCES /usr/lib64"
-SOURCES="$SOURCES /usr/bin"
-#SOURCES="$SOURCES /usr/sbin"
-#SOURCES="$SOURCES /sbin"
+LIBRIRS=''
+LIBRIRS="$LIBRIRS /dev"
+LIBRIRS="$LIBRIRS /etc"
+LIBRIRS="$LIBRIRS /usr"
+
+# All librari directories
+LIBRIRS="$LIBRIRS /usr/bin"
+LIBRIRS="$LIBRIRS /usr/lib"
+LIBRIRS="$LIBRIRS /usr/lib64"
+LIBRIRS="$LIBRIRS /usr/sbin"
 
 # These are being replaced with symlinks in Fedora and RHEL 7
-SOURCES="$SOURCES /bin"
-SOURCES="$SOURCES /lib"
-SOURCES="$SOURCES /lib64"
+LIBRIRS="$LIBRIRS /bin"
+LIBRIRS="$LIBRIRS /lib"
+LIBRIRS="$LIBRIRS /lib64"
+LIBRIRS="$LIBRIRS /sbin"
 
-for source in $SOURCES; do
+
+for libdir in $LIBRIRS; do
     rsynctarget "$source"
 done
 
-echo "$progname: Replicating files and populated directories"
-SOURCES=''
-SOURCES="$SOURCES /dev/null"
-SOURCES="$SOURCES /dev/log"
-SOURCES="$SOURCES /dev/urandom"
-SOURCES="$SOURCES /etc/ld.so.cache"
-SOURCES="$SOURCES /etc/ld.so.cache.d/"
-SOURCES="$SOURCES /etc/ld.so.conf"
-SOURCES="$SOURCES /etc/nsswitch.conf"
-SOURCES="$SOURCES /etc/hosts"
-SOURCES="$SOURCES /etc/resolv.conf"
 
-for source in $SOURCES; do
-    rsynctarget "$source"
+
+DEVICES="$DEVICES /dev/null"
+
+DEVICES="$DEVICES /dev/log"
+DEVICES="$DEVICES /dev/urandom"
+DEVICES="$DEVICES /dev/random"
+DEVICES="$DEVICES /dev/zero"
+for device in $DEVICES; do
+    rsynctarget "$device"
+done
+
+
+
+echo "$progname: Replicating files and populated directories"
+LIBS="$LIBS /etc/ld.so.cache"
+LIBS="$LIBS /etc/ld.so.cache.d/"
+LIBS="$LIBS /etc/ld.so.conf"
+LIBS="$LIBS /etc/nsswitch.conf"
+LIBS="$LIBS /etc/hosts"
+LIBS="$LIBS /etc/resolv.conf"
+
+for lib in $LIBS; do
+    rsynctarget "$lib"
 done
 
 echo "$progname: Replicating files and populated directories"
 # Works around /bin symlinks in Fedora and RHEL 7
-SOURCES=''
-SOURCES="$SOURCES /bin/bash"
-SOURCES="$SOURCES /bin/sh"
-SOURCES="$SOURCES /usr/bin/rssh"
-SOURCES="$SOURCES /usr/bin/rsync"
-SOURCES="$SOURCES /usr/bin/scp"
-SOURCES="$SOURCES /usr/bin/sftp"
-SOURCES="$SOURCES /usr/bin/ssh"
-SOURCES="$SOURCES /usr/libexec/openssh/sftp-server"
-SOURCES="$SOURCES /usr/libexec/rssh_chroot_helper"
-SOURCES="$SOURCES /usr/openssh/sftp-server"
-SOURCES="$SOURCES /usr/sbin/pwconv"
-SOURCES="$SOURCES /usr/sbin/pwunconv"
-SOURCES="$SOURCES /usr/sbin/grpconv"
-SOURCES="$SOURCES /usr/sbin/grpunconv"
+FILES=''
+FILES="$FILES /bin/bash"
+FILES="$FILES /bin/sh"
+FILES="$FILES /usr/bin/rssh"
+FILES="$FILES /usr/bin/rsync"
+FILES="$FILES /usr/bin/scp"
+FILES="$FILES /usr/bin/sftp"
+FILES="$FILES /usr/bin/ssh"
+FILES="$FILES /usr/libexec/openssh/sftp-server"
+FILES="$FILES /usr/libexec/rssh_chroot_helper"
+FILES="$FILES /usr/openssh/sftp-server"
+FILES="$FILES /usr/sbin/pwconv"
+FILES="$FILES /usr/sbin/pwunconv"
+FILES="$FILES /usr/sbin/grpconv"
+FILES="$FILES /usr/sbin/grpunconv"
 
-SOURCES="$SOURCES /etc/nsswitch.conf"
+FILES="$FILES /etc/nsswitch.conf"
 
-SOURCES="$SOURCES /bin/cat"
-SOURCES="$SOURCES /bin/su"
-SOURCES="$SOURCES /bin/pwd"
-SOURCES="$SOURCES /bin/ls"
-SOURCES="$SOURCES /usr/bin/ldd"
-SOURCES="$SOURCES /usr/bin/id"
-SOURCES="$SOURCES /usr/bin/getent"
-SOURCES="$SOURCES /usr/bin/groups"
-SOURCES="$SOURCES /usr/bin/whoami"
+FILES="$FILES /bin/cat"
+FILES="$FILES /bin/su"
+FILES="$FILES /bin/pwd"
+FILES="$FILES /bin/ls"
+FILES="$FILES /usr/bin/ldd"
+FILES="$FILES /usr/bin/id"
+FILES="$FILES /usr/bin/getent"
+FILES="$FILES /usr/bin/groups"
+FILES="$FILES /usr/bin/whoami"
 
-for source in $SOURCES; do
-    rsynctarget $source
-    if [ ! -x "$source" ]; then
+for file in $FILES; do
+    rsynctarget $file
+    if [ ! -x "$file" ]; then
 	continue
-    elif [ -d "$source" ]; then
+    elif [ -d "$file" ]; then
 	continue
-    elif [ -L "$source" ]; then
+    elif [ -L "$file" ]; then
 	continue
     fi
 
-    echo "    Calculating libraries for $source"
-    (ldd "$source" | awk '{print $1}'; ldd "$source" | awk '{print $3}') | \
+    echo "    Calculating lddlibraries for $file"
+    (ldd "$file" | awk '{print $1}'; ldd "$file" | awk '{print $3}') | \
 	sort -u | \
 	grep ^/ | \
-	while read lib; do
-	    echo "Replicating $source library: $lib"
-	    rsynctarget $lib
+	while read lddlib; do
+	    echo "Replicating $file lddlibrary: $lddlib"
+	    rsynctarget $lddlib
     done
 done
 
@@ -199,8 +212,6 @@ find /llb/ /lib64/ /usr/lib/ /ur/lib64/ ! -type d -name libnss\* | \
     while read lib; do
     rsynctarget $lib
 done
-
-
 
 
 # Ensure correct umask for file generation
