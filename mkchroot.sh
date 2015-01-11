@@ -10,8 +10,6 @@ Usage() {
     exit 1
 }
 
-CHROOTDIR=
-
 if [ $# -gt 1 ]; then
     Usage
 elif [ -n "$1" ]; then
@@ -109,33 +107,34 @@ rsynctarget() {
 }
 
 echo "$progname: Replicating bare directories"
-LIBRIRS=''
-LIBRIRS="$LIBRIRS /dev"
-LIBRIRS="$LIBRIRS /etc"
-LIBRIRS="$LIBRIRS /usr"
+LIBDIRS=''
+LIBDIRS="$LIBDIRS /dev"
+LIBDIRS="$LIBDIRS /etc"
+LIBDIRS="$LIBDIRS /usr"
 
 # All librari directories
-LIBRIRS="$LIBRIRS /usr/bin"
-LIBRIRS="$LIBRIRS /usr/lib"
-LIBRIRS="$LIBRIRS /usr/lib64"
-LIBRIRS="$LIBRIRS /usr/sbin"
+LIBDIRS="$LIBDIRS /usr/bin"
+LIBDIRS="$LIBDIRS /usr/lib"
+LIBDIRS="$LIBDIRS /usr/lib64"
+LIBDIRS="$LIBDIRS /usr/sbin"
 
 # These are being replaced with symlinks in Fedora and RHEL 7
-LIBRIRS="$LIBRIRS /bin"
-LIBRIRS="$LIBRIRS /lib"
-LIBRIRS="$LIBRIRS /lib64"
-LIBRIRS="$LIBRIRS /sbin"
+LIBDIRS="$LIBDIRS /bin"
+LIBDIRS="$LIBDIRS /lib"
+LIBDIRS="$LIBDIRS /lib64"
+LIBDIRS="$LIBDIRS /sbin"
 
 
-for libdir in $LIBRIRS; do
-    rsynctarget "$source"
+for libdir in $LIBDIRS; do
+    rsynctarget "$libdir"
 done
 
 
 
 DEVICES="$DEVICES /dev/null"
-
+# Useful for enabling syslog or rsyslog
 DEVICES="$DEVICES /dev/log"
+# Potentially useful for ssh or scp as actual user in chroot cage
 DEVICES="$DEVICES /dev/urandom"
 DEVICES="$DEVICES /dev/random"
 DEVICES="$DEVICES /dev/zero"
@@ -146,15 +145,16 @@ done
 
 
 echo "$progname: Replicating files and populated directories"
-LIBS="$LIBS /etc/ld.so.cache"
-LIBS="$LIBS /etc/ld.so.cache.d/"
-LIBS="$LIBS /etc/ld.so.conf"
-LIBS="$LIBS /etc/nsswitch.conf"
-LIBS="$LIBS /etc/hosts"
-LIBS="$LIBS /etc/resolv.conf"
+FILES=''
+FILES="$FILES /etc/ld.so.cache"
+FILES="$FILES /etc/ld.so.cache.d/"
+FILES="$FILES /etc/ld.so.conf"
+FILES="$FILES /etc/nsswitch.conf"
+FILES="$FILES /etc/hosts"
+FILES="$FILES /etc/resolv.conf"
 
-for lib in $LIBS; do
-    rsynctarget "$lib"
+for file in $FILES; do
+    rsynctarget "$file"
 done
 
 echo "$progname: Replicating files and populated directories"
@@ -170,85 +170,47 @@ FILES="$FILES /usr/bin/ssh"
 FILES="$FILES /usr/libexec/openssh/sftp-server"
 FILES="$FILES /usr/libexec/rssh_chroot_helper"
 FILES="$FILES /usr/openssh/sftp-server"
-FILES="$FILES /usr/sbin/pwconv"
-FILES="$FILES /usr/sbin/pwunconv"
-FILES="$FILES /usr/sbin/grpconv"
-FILES="$FILES /usr/sbin/grpunconv"
 
+# Critical for file ownership management
 FILES="$FILES /etc/nsswitch.conf"
 
-FILES="$FILES /bin/cat"
-FILES="$FILES /bin/su"
-FILES="$FILES /bin/pwd"
-FILES="$FILES /bin/ls"
-FILES="$FILES /usr/bin/ldd"
-FILES="$FILES /usr/bin/id"
-FILES="$FILES /usr/bin/getent"
-FILES="$FILES /usr/bin/groups"
-FILES="$FILES /usr/bin/whoami"
+# Useful for debugging tests inside chroot
+#FILES="$FILES /bin/cat"
+#FILES="$FILES /bin/su"
+#FILES="$FILES /bin/pwd"
+#FILES="$FILES /bin/ls"
+#FILES="$FILES /usr/bin/ldd"
+#FILES="$FILES /usr/bin/id"
+#FILES="$FILES /usr/bin/getent"
+#FILES="$FILES /usr/bin/groups"
+#FILES="$FILES /usr/bin/whoami"
+
+echo FILES: "$FILES"
 
 for file in $FILES; do
     rsynctarget $file
-    if [ ! -x "$file" ]; then
-	continue
-    elif [ -d "$file" ]; then
-	continue
-    elif [ -L "$file" ]; then
+
+    if [ ! -f $file -o ! -x $file -o -L "$file" ]; then
+        # Verify that file is, actually, a file that needs library detection
 	continue
     fi
 
-    echo "    Calculating lddlibraries for $file"
-    (ldd "$file" | awk '{print $1}'; ldd "$file" | awk '{print $3}') | \
-	sort -u | \
+    echo "ldd reviwingibraries for $file"
+
+    ldd "$file" | awk '{print $1"\n"$3}' | \
 	grep ^/ | \
 	while read lddlib; do
-	    echo "Replicating $file lddlibrary: $lddlib"
+	    echo "  binary: $file, ldd library: $lddlib"
 	    rsynctarget $lddlib
     done
 done
 
-# Get NSS libraries
-find /llb/ /lib64/ /usr/lib/ /ur/lib64/ ! -type d -name libnss\* | \
-    while read lib; do
-    rsynctarget $lib
-done
-
-
-# Ensure correct umask for file generation
-umask 022
-# Clear credential files before starting
-rm -f $CHROOTDIR/etc/passwd
-rm -f $CHROOTDIR/etc/group
-touch $CHROOTDIR/etc/passwd
-touch $CHROOTDIR/etc/group
-# Only creat accounts for rssh enabled users
-grep ":$CHROOTDIR" /etc/passwd | \
-    sed "s|:$CHROOTDIR|:/|g"  | \
-    sed 's|://|:/|g' > $CHROOTDIR/etc/passwd
-
-# Optional: activate additional chroot targets, as needed
-grep ^root: /etc/passwd >> $CHROOTDIR//etc/passwd
-grep ^rsshusers: /etc/passwd >> $CHROOTDIR//etc/passwd
-
-sort -u -o $CHROOTDIR/etc/passwd $CHROOTDIR/etc/passwd
-echo Working $CHROOTDIR/etc/passwd:
-cat $CHROOTDIR/etc/passwd
-
-# Deduce all relevant groups for users
-CHROOTUSERS="`cut -f1 -d: $CHROOTDIR/etc/passwd`"
-if [ -z "$CHROOTUSERS" ]; then
-    echo "Warning: No CHROOTUSERS found, making blank $CHROOTDIR/etc/group"
-    touch $CHROOTDIR/etc/group
-fi
-
-for user in $CHROOTUSERS; do
-    groups="`id -n --groups $user`"
-    for group in $groups; do
-	echo checking for group name: $group
-	grep ^"$group:" /etc/group >> $CHROOTDIR/etc/group
+# Get NSS libraries as needed
+for nssdir in /lib/ /lib64/ /usr/lib64/ /usr/lib/; do
+    echo "Searching for libnss files: $nssdir"
+    find $nssdir -name libnss\* ! -type d | \
+    while read libnss; do
+	echo "    Replicating libnss library: $libnss"
+	rsynctarget $libnss
     done
 done
-sort -u -o $CHROOTDIR/etc/group $CHROOTDIR/etc/group
-echo
-echo Reporting group file: $CHROOTDIR/etc/group
-cat $CHROOTDIR/etc/group
