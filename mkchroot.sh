@@ -37,20 +37,12 @@ if [ ! -d $CHROOTDIR ]; then
     exit 1
 fi
 
-echo "progname: building chrootdir: $CHROOTDIR"
-
-#findlibs() {
-#    for bin in $@; do
-#	echo Checking libraries for $bin >&2
-#	if [ ! -x $1 -o ! -f $1 ]; then
-#	    echo Skipping non-executable $1 >&2
-#	else
-#	    # Alternative listings for actual libraries
-#	    ldd $1 | awk '{print $1}' | grep ^/ | \
-#	    ldd $1 | awk '{print $3}' | grep ^/
-#	fi
-#    done
-#}
+findlibs() {
+    bin=$1
+    if [ -f $bin -a -x $bin -a ! -L $bin ]; then
+	ldd $bin | awk '{print $1"\n"$3}' | grep ^/
+    fi
+}
 
 rsynctarget() {
     target=$1
@@ -185,23 +177,12 @@ FILES="$FILES /etc/nsswitch.conf"
 #FILES="$FILES /usr/bin/groups"
 #FILES="$FILES /usr/bin/whoami"
 
-echo FILES: "$FILES"
-
 for file in $FILES; do
     rsynctarget $file
-
-    if [ ! -f $file -o ! -x $file -o -L "$file" ]; then
-        # Verify that file is, actually, a file that needs library detection
-	continue
-    fi
-
-    echo "ldd reviwingibraries for $file"
-
-    ldd "$file" | awk '{print $1"\n"$3}' | \
-	grep ^/ | \
-	while read lddlib; do
-	    echo "  binary: $file, ldd library: $lddlib"
-	    rsynctarget $lddlib
+    # Get loadable libraries
+    findlibs $file | \
+	while read lib; do
+	    rsynctarget $lib
     done
 done
 
