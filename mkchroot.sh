@@ -56,22 +56,21 @@ rsynctarget() {
 	return 1
     fi
 	
-    echo "    rsynctarget: rsyncing $target"
+    echo "    rsynctarget: $target"
     if [ -L "$target" ]; then
-	echo "Replicating symlink: $target"
+	#echo "Replicating symlink: $target"
 	rsync -a -H -R "$target" $CHROOTDIR
 	link="`readlink "$target"`"
 	case "$link" in
 	    /*)
-		rsynctarget $link
 		;;
 	    *)
 		link="`dirname "$target"`/$link"
-		export link
-		echo  "    link with target dirname: $link"
-		rsynctarget "$link"
+		echo  "      link relative symlink with target dirname: $link"
 		;;
 	esac
+	rsynctarget "$link"
+	return $?
     elif [ -d "$target" ]; then
 	# Use readlink to clean out symlinks
 	target="`readlink --canonicalize $target`"
