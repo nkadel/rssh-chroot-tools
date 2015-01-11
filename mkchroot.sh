@@ -29,10 +29,15 @@ case $CHROOTDIR in
 	echo "Error: unallowed CHROOTDIR \"$CHROOTDIR\"" >&2
 	exit 1
 	;;
-    *:*)
+    /*)
+	;;
+    *)
+	echo "Error: unallowed CHROOTDIR \"$CHROOTDIR\"" >&2
+	exit 1
+	;;
 esac
 
-if [ ! -d $CHROOTDIR ]; then
+if [ ! -d "$CHROOTDIR" ]; then
     echo "Error: non-existent \"$CHROOTDIR\"" >&2
     exit 1
 fi
@@ -54,16 +59,21 @@ rsynctarget() {
 	return 1
     fi
 
-    echo "    rsynctarget: $target"
+    #echo "    rsynctarget: $target"
     case $target in
 	/*../*)
-	    echo "Warning: rsynctarget 'rsync -R' cannot handle ../ in $target" >&2
-	    realdir="`dirname "$target" | xargs readlink --canonicalize`"
-	    realname="$realdir/`basename $target`"
+	    echo "Warning: replacing '../' based $target" >&2
+	    realname="`dirname "$target" | xargs readlink --canonicalize`"/"`basename "$target"`"
 	    echo "    Using $realname" >&2
 	    rsynctarget "$realname"
 	    return $?
 	    ;;
+	/*)
+	    # Verify that target starts with /
+	    ;;
+	*)
+	    echo "Error: no / at start of $target"
+	    exit 1
     esac
     if [ -L "$target" ]; then
 	#echo "Replicating symlink: $target"
@@ -73,8 +83,10 @@ rsynctarget() {
 	    /*)
 		;;
 	    *)
+		echo -n "      Unqualified symlink:: $link, using "
 		link="`dirname "$target"`/$link"
-		echo  "      link relative symlink with target dirname: $link"
+		echo -n "$link"
+		echo "$link"
 		;;
 	esac
 	rsynctarget "$link"
@@ -83,18 +95,22 @@ rsynctarget() {
 	# Use readlink to clean out symlinks
 	target="`readlink --canonicalize $target`"
 	case "$target" in
-	    */)
+	    /*/)
 		# Replicate contents of directory
 		#echo "Replicating contents: $target"
 		rsync -a -H -R "$target" $CHROOTDIR
 		return $?
 		;;
-	    *)
+	    /*)
 		# Replicate directory only
 		echo "Replicating directory: $target"
 		rsync -a -H -R --exclude=$target/* "$target" $CHROOTDIR
 		return $?
 		;;
+	    *)
+		# How did we get here? this is wrong!!!
+		echo "Error: $target does not start with '/', exiting"
+		exit 1
 	esac
     else
 	# Use readlink to clean out symlinks
