@@ -15,7 +15,7 @@ if [ $# -gt 1 ]; then
 elif [ -n "$1" ]; then
     CHROOTDIR=$1       
 else
-    CHROOTDIR=/usr/local/chroot/
+    CHROOTDIR=/chroot/
 fi
 
 # Sanitize CHROOTDIR to prevent confusion
@@ -113,7 +113,7 @@ rsynctarget() {
 		exit 1
 	esac
     else
-	# Use readlink to clean out symlinks
+	# Use readlink to clean out remaining links or '../' fun and games
 	target="`readlink --canonicalize $target`"
 	#echo "Replicating file: $target"
 	rsync -a -H -R "$target" "$CHROOTDIR" || return $?
@@ -139,6 +139,11 @@ LIBDIRS="$LIBDIRS /lib"
 LIBDIRS="$LIBDIRS /lib64"
 LIBDIRS="$LIBDIRS /sbin"
 
+# Temporary for nss debugging
+LIBDIRS="$LIBDIRS /lib/"
+LIBDIRS="$LIBDIRS /lib64/"
+LIBDIRS="$LIBDIRS /usr/lib"
+LIBDIRS="$LIBDIRS /usr/lib64"
 
 for libdir in $LIBDIRS; do
     rsynctarget "$libdir"
@@ -154,7 +159,6 @@ for nssdir in /lib/ /lib64/ /usr/lib64/ /usr/lib/; do
 	    rsynctarget $libnss
     done
 done
-exit 6
 
 DEVICES="$DEVICES /dev/null"
 # Useful for enabling syslog or rsyslog
