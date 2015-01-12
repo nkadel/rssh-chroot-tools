@@ -152,8 +152,8 @@ done
 
 # Get NSS libraries as needed
 for nssdir in /lib/ /lib64/ /usr/lib64/ /usr/lib/; do
-    echo "Searching for libnss files: $nssdir"
-    find $nssdir -name libnss\* ! -type d | \
+    echo "Searching for libnss_files files: $nssdir"
+    find $nssdir -name libnss_files\* ! -type d | \
 	while read libnss; do
 	    echo "    Replicating libnss library: $libnss"
 	    rsynctarget $libnss
@@ -187,9 +187,10 @@ done
 echo "$progname: Replicating files and populated directories"
 # Works around /bin symlinks in Fedora and RHEL 7
 FILES=''
-FILES="$FILES /bin/bash"
-FILES="$FILES /bin/sh"
+# rssh.conf activatable tools
 FILES="$FILES /usr/bin/rssh"
+FILES="$FILES /usr/bin/cvs"
+FILES="$FILES /usr/bin/rdist"
 FILES="$FILES /usr/bin/rsync"
 FILES="$FILES /usr/bin/scp"
 FILES="$FILES /usr/bin/sftp"
@@ -200,6 +201,10 @@ FILES="$FILES /usr/openssh/sftp-server"
 
 # Critical for file ownership management
 FILES="$FILES /etc/nsswitch.conf"
+
+# Possibly useful shells for debugging
+#FILES="$FILES /bin/bash"
+#FILES="$FILES /bin/sh"
 
 # Useful for debugging tests inside chroot
 #FILES="$FILES /bin/cat"
