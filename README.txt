@@ -24,6 +24,7 @@ specific guidelines on the net.
    from whichever /lib, /lib64, /usr/lib/, etc. directory contains them.
 ** mkchroot.sh now pre-creates directories like "/lib" and "/lib64" to
    deal with CentOS and Fedora symlink usage.
+
 * Management of account creation, especially the "etc/passwd" and
  "etc/group", has been moved to a swparate script "mkchroot-passwd.sh"
 ** mkchroot-passwd.sh uses 'getent' to deduce relevant accounts.
