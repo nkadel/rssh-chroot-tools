@@ -164,9 +164,9 @@ DEVICES="$DEVICES /dev/null"
 # Useful for enabling syslog or rsyslog
 DEVICES="$DEVICES /dev/log"
 # Potentially useful for ssh or scp as actual user in chroot cage
-DEVICES="$DEVICES /dev/urandom"
-DEVICES="$DEVICES /dev/random"
-DEVICES="$DEVICES /dev/zero"
+#DEVICES="$DEVICES /dev/urandom"
+#DEVICES="$DEVICES /dev/random"
+#DEVICES="$DEVICES /dev/zero"
 for device in $DEVICES; do
     rsynctarget "$device"
 done
