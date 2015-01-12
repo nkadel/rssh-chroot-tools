@@ -83,7 +83,7 @@ rsynctarget() {
 	    /*)
 		;;
 	    *)
-		echo -n "      Unqualified symlink:: $link, using "
+		echo -n "      Unqualified symlink: $link, using "
 		link="`dirname "$target"`/$link"
 		echo -n "$link"
 		echo "$link"
@@ -140,10 +140,10 @@ LIBDIRS="$LIBDIRS /lib64"
 LIBDIRS="$LIBDIRS /sbin"
 
 # Temporary for nss debugging
-LIBDIRS="$LIBDIRS /lib/"
-LIBDIRS="$LIBDIRS /lib64/"
-LIBDIRS="$LIBDIRS /usr/lib"
-LIBDIRS="$LIBDIRS /usr/lib64"
+#LIBDIRS="$LIBDIRS /lib/"
+#LIBDIRS="$LIBDIRS /lib64/"
+#LIBDIRS="$LIBDIRS /usr/lib"
+#LIBDIRS="$LIBDIRS /usr/lib64"
 
 for libdir in $LIBDIRS; do
     rsynctarget "$libdir"
