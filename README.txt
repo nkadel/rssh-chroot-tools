@@ -1,5 +1,7 @@
 *** rssh-chroot-tools ***
 
+[ Available at https://github.com/nkadel/rssh-chroot-tools/. ]
+
 These tools are based on the 'mkchroot.sh' script from
 rssh-2.3.4. They're noticeably more powerful, safer, and easier to
 expand. They're also a "one-stop" operation on RHEL 6 based operating
