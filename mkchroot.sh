@@ -195,9 +195,18 @@ FILES="$FILES /usr/bin/rsync"
 FILES="$FILES /usr/bin/scp"
 FILES="$FILES /usr/bin/sftp"
 FILES="$FILES /usr/bin/ssh"
-FILES="$FILES /usr/libexec/openssh/sftp-server"
-FILES="$FILES /usr/libexec/rssh_chroot_helper"
-FILES="$FILES /usr/openssh/sftp-server"
+if [ -e /etc/redhat-release ]; then
+    FILES="$FILES /usr/libexec/openssh/sftp-server"
+    FILES="$FILES /usr/libexec/rssh_chroot_helper"
+elif [ -e /etc/debian_version ]; then
+    FILES="$FILES /usr/lib/openssh/sftp-server"
+    FILES="$FILES /usr/lib/rssh_chroot_helper"
+    FILES="$FILES /usr/lib/sftp-server"
+else
+    FILES="$FILES /usr/openssh/sftp-server"
+    echo Error: No idea where to find rssh_chroot_helper, exiting >&1
+    exit 1
+fi
 
 # Critical for file ownership management
 FILES="$FILES /etc/nsswitch.conf"
