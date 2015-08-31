@@ -77,7 +77,7 @@ rsynctarget() {
     esac
     if [ -L "$target" ]; then
 	#echo "Replicating symlink: $target"
-	rsync -a -H -R "$target" $CHROOTDIR
+	rsync -a --hard-links --relative "$target" $CHROOTDIR
 	link="`readlink "$target"`"
 	case "$link" in
 	    /*)
@@ -98,13 +98,13 @@ rsynctarget() {
 	    /*/)
 		# Replicate contents of directory
 		#echo "Replicating contents: $target"
-		rsync -a -H -R "$target" $CHROOTDIR
+		rsync -a --hard-links --relative "$target" $CHROOTDIR
 		return $?
 		;;
 	    /*)
 		# Replicate directory only
 		echo "Replicating directory: $target"
-		rsync -a -H -R --exclude=$target/* "$target" $CHROOTDIR
+		rsync -a --hard-links --relative --exclude=$target/* "$target" $CHROOTDIR
 		return $?
 		;;
 	    *)
@@ -116,7 +116,7 @@ rsynctarget() {
 	# Use readlink to clean out remaining links or '../' fun and games
 	target="`readlink --canonicalize $target`"
 	#echo "Replicating file: $target"
-	rsync -a -H -R "$target" "$CHROOTDIR" || return $?
+	rsync -a --hard-links --relative "$target" "$CHROOTDIR" || return $?
 	return $?
     fi
 }
